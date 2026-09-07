@@ -128,7 +128,7 @@ class web_parser:
         for row in rows:
             cols = row.xpath('.//td')
             if len(cols) < 5:
-                logger.warning(f"Row skipped in game file: Expected at least 5 columns, found {len(cols)}.")
+                logger.debug(f"Row skipped in game file: Expected at least 5 columns, found {len(cols)}.")
                 continue
                 
             path, filename = os.path.split(cols[1].text_content().strip())
@@ -138,7 +138,7 @@ class web_parser:
             
             a_tag = cols[4].xpath('.//a')
             if not a_tag:
-                logger.warning(f"Row warning in game file '{filename}': Missing anchor link in the 5th column.")
+                logger.debug(f"Row warning in game file '{filename}': Missing anchor link in the 5th column.")
                 
             href = a_tag[0].get('href', '') if a_tag else ''
             data.append({
