@@ -3,4 +3,4 @@ steampy>=1.2.0,<2
 requests>=2.28.2,<3
 discord-webhook>=1.1.0,<2
 tzdata>=2023.3
-lxml>=5.1.0,<7
+lxml>=5.1.0,<6
