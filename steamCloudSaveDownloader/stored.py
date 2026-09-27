@@ -25,4 +25,5 @@ class stored:
                         local_date = utc_date.astimezone().replace(tzinfo=None)
                     else:
                         local_date = utc_date
-                    print(f"    - {version_num} : {local_date}")
+                    suffix = utc_date.strftime("%Y%m%d_%H%M%S") if utc_date else str(version_num)
+                    print(f"    - {local_date} (backup: .scsd_{suffix})")

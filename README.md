@@ -36,7 +36,7 @@ pip install scsd
 Linux and Windows executable can also be found on the [release page](https://github.com/pyscsd/steamCloudSaveDownloader/releases)
 
 ## Usage
-Simply run `scsd -a <username>` to [login to Steam](#Authentication). Then run `scsd` to start downloading saves. The saves for each game will be stored within the `data` directory with the corresponding [AppID](https://steamdb.info/apps/). If rotation is specified the old version of the file will have suffix `.scsd_<version_num>` to the corresponding file name.
+Simply run `scsd -a <username>` to [login to Steam](#Authentication). Then run `scsd` to start downloading saves. The saves for each game will be stored within the `data` directory with the corresponding [AppID](https://steamdb.info/apps/). If rotation is specified the old version of the file will have suffix `.scsd_<timestamp>` (e.g., `.scsd_20260925_193000`) appended to the corresponding file name.
 
 Please refer to [Scheduled Run](#Scheduled-Run) if you want to run scsd automatically at given time.
 

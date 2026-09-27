@@ -56,7 +56,7 @@ class TestDB:
             datetime_ = datetime_ + datetime.timedelta(1)
             db_.update_file_update_time_to_now(1, datetime_)
         cur = db_.con.cursor()
-        res = cur.execute("SELECT time FROM VERSION WHERE file_id = ? ORDER BY version_num ASC;", (1,))
+        res = cur.execute("SELECT time FROM VERSION WHERE file_id = ? ORDER BY time DESC;", (1,))
         result = res.fetchall()
         assert len(result) == 7
         assert result[-1][0] == datetime.datetime(2009, 8, 31)
@@ -64,10 +64,26 @@ class TestDB:
 
     def test_remove_outdated(self, tmp_location):
         db_ = db.db(db_location=tmp_location, rotation=2)
-        db_.remove_outdated_file(1)
+        outdated = db_.remove_outdated_file(1)
+        assert len(outdated) == 5
         cur = db_.con.cursor()
-        res = cur.execute("SELECT time FROM VERSION WHERE file_id = ? ORDER BY version_num ASC;", (1,))
+        res = cur.execute("SELECT time FROM VERSION WHERE file_id = ? ORDER BY time DESC;", (1,))
         result = res.fetchall()
         assert len(result) == 2
         assert result[0][0] == datetime.datetime(2009, 9, 6)
         assert result[1][0] == datetime.datetime(2009, 9, 5)
+
+    def test_get_file_version_by_file_id(self, tmp_location):
+        db_ = db.db(db_location=tmp_location, rotation=2)
+        versions = db_.get_file_version_by_file_id(1)
+        assert len(versions) == 2
+        # Check that ordinal is derived dynamically: newest is 0, next is 1
+        assert versions[0][0] == datetime.datetime(2009, 9, 6)
+        assert versions[0][1] == 0
+        assert versions[1][0] == datetime.datetime(2009, 9, 5)
+        assert versions[1][1] == 1
+
+    def test_get_latest_file_version_time(self, tmp_location):
+        db_ = db.db(db_location=tmp_location, rotation=2)
+        latest_time = db_.get_latest_file_version_time(1)
+        assert latest_time == datetime.datetime(2009, 9, 6, tzinfo=datetime.timezone.utc)
