@@ -26,7 +26,7 @@ TABLE VERSION
 version_id (INT) PK AUTOINC
 file_id foreign key
 time (datetime)
-version_num (INT) >= 0
+version_num (INT) >= 0 (deprecated and unused in v1+)
 
 TABLE REQUESTS
 id (INT) PK NOT NULL DEFAULT 0
@@ -131,8 +131,21 @@ class db:
 
         self.con.commit()
 
+        self.set_db_version(1)
+
         if not self.schema_ok():
             raise err.err(err_enum.CANNOT_INITIALIZE_DB)
+
+    def get_db_version(self) -> int:
+        cur = self.con.cursor()
+        res = cur.execute("PRAGMA user_version;")
+        row = res.fetchone()
+        return row[0] if row else 0
+
+    def set_db_version(self, version: int):
+        cur = self.con.cursor()
+        cur.execute(f"PRAGMA user_version = {version};")
+        self.con.commit()
 
     def add_requests_count(self, count:int):
         cur = self.con.cursor()
@@ -198,13 +211,13 @@ class db:
             file_id = cur.lastrowid
 
             no_tz_time = tup[3].replace(tzinfo=None)
-            res = cur.execute("INSERT INTO VERSION VALUES (NULL, ?, ?, ?);", (file_id, no_tz_time, 0))
+            res = cur.execute("INSERT INTO VERSION (version_id, file_id, time, version_num) VALUES (NULL, ?, ?, 0);", (file_id, no_tz_time))
 
         self.con.commit()
 
     def is_file_outdated(self, file_id:int, server_time:datetime) -> tuple:
         cur = self.con.cursor()
-        res = cur.execute("SELECT time FROM VERSION WHERE file_id = ? and version_num = 0;", (file_id,))
+        res = cur.execute("SELECT time FROM VERSION WHERE file_id = ? ORDER BY time DESC LIMIT 1;", (file_id,))
         db_time_tuple = res.fetchone()
         if db_time_tuple is None:
             logger.warning(f'Failed to retrieve newest version time for file_id {file_id}')
@@ -219,40 +232,54 @@ class db:
         else:
             return (False, tz_db_time)
 
-    # +1 for each version
-    # Insert 0 as now
-    # Return max version
+    def get_latest_file_version_time(self, file_id:int):
+        cur = self.con.cursor()
+        res = cur.execute("SELECT time FROM VERSION WHERE file_id = ? ORDER BY time DESC LIMIT 1;", (file_id,))
+        row = res.fetchone()
+        if row is None:
+            return None
+        return row[0].replace(tzinfo=datetime.timezone.utc)
+
+    # Insert newest version as 0
+    # Return count of versions
     def update_file_update_time_to_now(self, file_id:int, newest_file_time: datetime.datetime) -> int:
         cur = self.con.cursor()
 
-        # Increment one for all
-        res = cur.execute("UPDATE VERSION SET version_num = version_num + 1 WHERE file_id = ?;", (file_id,))
-
         time_without_tz = newest_file_time.replace(tzinfo=None)
-        # Insert newest as 0
-        res = cur.execute("INSERT INTO VERSION VALUES (NULL, ?, ?, 0)", (file_id, time_without_tz))
+        res = cur.execute("INSERT INTO VERSION (version_id, file_id, time, version_num) VALUES (NULL, ?, ?, 0)", (file_id, time_without_tz))
         self.con.commit()
 
         res = cur.execute("SELECT COUNT(*) FROM VERSION WHERE file_id = ?", (file_id,))
-        count = res.fetchone();
+        count = res.fetchone()
 
-        if (count is None):
+        if count is None:
             return 0
         else:
             return count[0]
 
     def remove_outdated_file(self, file_id:int):
-        cur = self.con.cursor()
-        res = cur.execute("SELECT version_num FROM VERSION WHERE file_id = ? AND version_num >= ?", (file_id, self.rotation))
-        outdated_version_num = res.fetchall();
+        if self.rotation <= 0:
+            return []
 
-        res = cur.execute("DELETE FROM VERSION WHERE file_id = ? AND version_num >= ?", (file_id, self.rotation))
+        cur = self.con.cursor()
+        res = cur.execute(
+            "SELECT version_id, time, version_num FROM VERSION WHERE file_id = ? ORDER BY time DESC LIMIT -1 OFFSET ?;",
+            (file_id, self.rotation)
+        )
+        outdated_rows = res.fetchall()
+
+        if not outdated_rows:
+            return []
+
+        version_ids = [row[0] for row in outdated_rows]
+        placeholders = ','.join(['?'] * len(version_ids))
+        cur.execute(f"DELETE FROM VERSION WHERE version_id IN ({placeholders});", version_ids)
 
         self.con.commit()
 
-        logger.debug(f"DB Removing version {outdated_version_num}")
+        logger.debug(f"DB Removing version {[row[1] for row in outdated_rows]}")
 
-        return outdated_version_num
+        return [(row[1], row[2]) for row in outdated_rows]
 
     def get_stored_game_names(self, ids:list):
         # Performance should be negligible other wise think of better
@@ -284,7 +311,7 @@ class db:
 
     def get_file_version_by_file_id(self, file_id:int):
         cur = self.con.cursor()
-        query = "SELECT time, version_num FROM VERSION WHERE file_id = ? ORDER BY version_num ASC;";
+        query = "SELECT time, ROW_NUMBER() OVER (ORDER BY time DESC) - 1 AS version_num FROM VERSION WHERE file_id = ? ORDER BY time DESC;";
         res = cur.execute(query, (file_id,))
-        result = res.fetchall();
+        result = res.fetchall()
         return result
