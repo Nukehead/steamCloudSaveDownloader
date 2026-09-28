@@ -40,6 +40,15 @@ count (int)
 logger = logging.getLogger('scsd')
 
 class db:
+    # Migration Versioning:
+    # Migrations are classified as "mandatory" or "optional".
+    # - MINIMUM_DB_VERSION enforces the mandatory boundary (run automatically on normal startup).
+    # - LATEST_DB_VERSION acts as the optional tip (run manually via --migrate).
+    # 
+    # RULE: Optional migrations are only allowed at the end of the version tree.
+    # There can never be an optional migration preceding a mandatory one. If a future 
+    # mandatory version is added, MINIMUM_DB_VERSION must be bumped past any existing 
+    # optional versions, inherently making them mandatory.
     LATEST_DB_VERSION = 2
     MINIMUM_DB_VERSION = 1
 
