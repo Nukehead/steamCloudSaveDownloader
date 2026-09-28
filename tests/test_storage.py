@@ -152,7 +152,7 @@ def test_rotate_file_and_remove_outdated(storage_env):
     assert os.path.isfile(backup_2)
     assert os.path.isfile(active_path)
 
-def test_migrate_v0_to_v1(storage_env):
+def test_rename_legacy_backups(storage_env):
     save_dir, db_, s = storage_env
     app_id = 7777
     filename = "slot.sav"
@@ -181,7 +181,7 @@ def test_migrate_v0_to_v1(storage_env):
         f.write("v1_content")
 
     # Run migration
-    s.migrate_v0_to_v1(app_id)
+    s.rename_legacy_backups(app_id)
 
     # Check that v0 files are renamed to timestamp format
     assert not os.path.exists(os.path.join(game_dir, f"{filename}.scsd_1"))
@@ -217,7 +217,7 @@ def test_migrate_orphaned_v0_backups(storage_env):
     ts = target_dt.timestamp()
     os.utime(orphan_path, (ts, ts))
 
-    s.migrate_v0_to_v1(app_id)
+    s.rename_legacy_backups(app_id)
 
     assert not os.path.exists(orphan_path)
     expected_migrated = os.path.join(game_dir, f"{filename}.scsd_20241115_083000")

@@ -40,7 +40,7 @@ count (int)
 logger = logging.getLogger('scsd')
 
 class db:
-    LATEST_DB_VERSION = 1
+    LATEST_DB_VERSION = 2
     MINIMUM_DB_VERSION = 1
 
     requests_limit = 85000
