@@ -7,6 +7,7 @@ import datetime
 import logging
 import signal
 import glob
+import typing
 
 logger = logging.getLogger('scsd')
 
@@ -81,7 +82,13 @@ class storage:
         """All timestamps in the database and file suffixes represent UTC."""
         return version_time.strftime("%Y%m%d_%H%M%S")
 
-    def get_version_suffix(self, version_time=None):
+    def get_version_suffix(self, version_time: "typing.Union[int, str, datetime.datetime, None]" = None) -> str:
+        """
+        Generates the appropriate file suffix based on the provided type:
+        - None / 0: Active file (no suffix)
+        - int: Legacy v0 backup suffix (e.g. .scsd_1)
+        - datetime (or ISO str): v1 timestamp suffix (e.g. .scsd_20260904_231455)
+        """
         if version_time is None or version_time == 0:
             return ""
         if isinstance(version_time, int):
@@ -155,6 +162,7 @@ class storage:
             versions = self.db_.get_file_version_by_file_id(file_id)
             for v_time, v_num in versions:
                 if v_num == 0:
+                    # Skip the active file (version 0), as it has no suffix to rename
                     continue
                 v0_file = os.path.join(path_to_save, f"{filename}.scsd_{v_num}")
                 if os.path.isfile(v0_file):
@@ -247,13 +255,7 @@ class storage:
             if not outdated_versions:
                 return
 
-            for version_info in outdated_versions:
-                if isinstance(version_info, (tuple, list)):
-                    version_time = version_info[0]
-                    v0_version_num = version_info[1] if len(version_info) > 1 else None
-                else:
-                    version_time = version_info
-                    v0_version_num = None
+            for version_time, v0_version_num in outdated_versions:
 
                 version_suffix = self.get_version_suffix(version_time)
                 target = os.path.join(path_to_save, filename + version_suffix)

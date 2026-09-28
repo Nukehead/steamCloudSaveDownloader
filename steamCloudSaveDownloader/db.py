@@ -311,6 +311,8 @@ class db:
 
     def get_file_version_by_file_id(self, file_id:int):
         cur = self.con.cursor()
+        # Uses a window function to dynamically synthesize the old v0 version_num 
+        # (where 0 is the active file, 1 is the newest backup, etc.) based on time.
         query = "SELECT time, ROW_NUMBER() OVER (ORDER BY time DESC) - 1 AS version_num FROM VERSION WHERE file_id = ? ORDER BY time DESC;";
         res = cur.execute(query, (file_id,))
         result = res.fetchall()
