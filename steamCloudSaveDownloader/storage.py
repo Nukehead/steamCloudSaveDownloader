@@ -144,7 +144,7 @@ class storage:
                 os.utime(new_name, (old_mtime, old_mtime))
 
     @key_interrupt_atomic
-    def migrate_v0_to_v1(self, app_id: int):
+    def rename_legacy_backups(self, app_id: int):
         db_game_dir = self.db_.get_game_dir(app_id)
         if db_game_dir is None:
             return
@@ -164,22 +164,22 @@ class storage:
                 if v_num == 0:
                     # Skip the active file (version 0), as it has no suffix to rename
                     continue
-                v0_file = os.path.join(path_to_save, f"{filename}.scsd_{v_num}")
-                if os.path.isfile(v0_file):
+                legacy_file = os.path.join(path_to_save, f"{filename}.scsd_{v_num}")
+                if os.path.isfile(legacy_file):
                     new_suffix = self.get_version_suffix(v_time)
                     new_file = os.path.join(path_to_save, filename + new_suffix)
                     if not os.path.exists(new_file):
-                        old_info = os.stat(v0_file)
-                        os.replace(v0_file, new_file)
+                        old_info = os.stat(legacy_file)
+                        os.replace(legacy_file, new_file)
                         os.utime(new_file, (old_info.st_mtime, old_info.st_mtime))
-                        logger.info(f"Migrated v0 backup '{v0_file}' -> '{new_file}'")
+                        logger.info(f"Migrated legacy backup '{legacy_file}' -> '{new_file}'")
                     else:
                         try:
-                            os.remove(v0_file)
+                            os.remove(legacy_file)
                         except OSError:
                             pass
 
-        # Also scan the entire game folder for any remaining v0 .scsd_<digits> files
+        # Also scan the entire game folder for any remaining legacy .scsd_<digits> files
         try:
             for root, _, filenames in os.walk(game_dir_path):
                 for entry in filenames:

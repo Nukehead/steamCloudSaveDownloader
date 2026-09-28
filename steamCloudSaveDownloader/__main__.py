@@ -18,7 +18,7 @@ import os
 import sys
 import traceback
 
-logger = None
+logger = logging.getLogger("scsd")
 
 g_lock_file_name = ".scsd.lock"
 g_logger_format = '%(asctime)s [%(levelname)s] %(message)s'
@@ -295,7 +295,7 @@ def main(parsed_args, notifier_):
     storage_ = storage.storage(parsed_args['General']['save_dir'], db_)
 
     # Automatically apply bugfix migrations (e.g. PST->UTC correction)
-    migration.DatabaseMigrator(db_).run()
+    migration.DatabaseMigrator(db_, storage_).run()
 
     current_version = db_.get_db_version()
     if current_version < db.db.MINIMUM_DB_VERSION:

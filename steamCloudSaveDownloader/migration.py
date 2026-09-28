@@ -6,8 +6,9 @@ from . import db
 logger = logging.getLogger('scsd')
 
 class DatabaseMigrator:
-    def __init__(self, db_):
+    def __init__(self, db_, storage_):
         self.db_ = db_
+        self.storage_ = storage_
 
     def run(self):
         current_version = self.db_.get_db_version()
@@ -24,6 +25,17 @@ class DatabaseMigrator:
             self.db_.set_db_version(1)
             current_version = 1
             logger.info("Migration to v1 complete.")
+        if current_version == 1:
+            logger.info("Migrating v1 to v2: Changing local file name from numbered suffix to timestamped suffix (i.e. .scsd_1 to .scsd_20260904_231455)...")
+            game_list = self.db_.get_stored_game_names([])
+            for app_id, game_name in game_list:
+                logger.info(f"  Migrating {game_name} ({app_id})...")
+                self.storage_.rename_legacy_backups(app_id)
+
+            self.db_.set_db_version(2)
+            current_version = 2
+            logger.info("Migration to v2 complete.")
+
 
     def _migrate_v0_to_v1(self):
         cur = self.db_.con.cursor()
