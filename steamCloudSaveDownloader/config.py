@@ -39,7 +39,7 @@ class config:
     def raise_err(self, additional_info=""):
         self.parse_error.set_additional_info(additional_info)
         raise self.parse_error
-    def __init__(self, file=None, auth=None, stored=None):
+    def __init__(self, file=None, auth=None, stored=None, migrate=None):
         self.parse_error = err(err_enum.INVALID_CONFIG)
 
         self.config_file = file
