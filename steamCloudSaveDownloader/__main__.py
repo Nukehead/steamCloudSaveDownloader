@@ -285,6 +285,11 @@ def main(parsed_args, notifier_):
         stored_ = stored.stored(parsed_args['stored'], parsed_args['General']['save_dir'])
         stored_.get_result()
         return
+    elif parsed_args.get("migrate"):
+        db_ = db.db(parsed_args["General"]["save_dir"], parsed_args["Rotation"]["rotation"])
+        storage_ = storage.storage(parsed_args["General"]["save_dir"], db_)
+        migration.DatabaseMigrator(db_, storage_).run(manual=True)
+        return
 
     auth_.refresh_session()
     session_pkl = auth_.get_session_path()
@@ -295,12 +300,19 @@ def main(parsed_args, notifier_):
     storage_ = storage.storage(parsed_args['General']['save_dir'], db_)
 
     # Automatically apply bugfix migrations (e.g. PST->UTC correction)
-    migration.DatabaseMigrator(db_, storage_).run()
+    migration.DatabaseMigrator(db_, storage_).run(manual=False)
 
     current_version = db_.get_db_version()
     if current_version < db.db.MINIMUM_DB_VERSION:
         logger.error(f"Database version {current_version} is unsupported and automatic migration failed.")
         return
+
+    # Version compatibility check
+    current_version = db_.get_db_version()
+    if current_version < db.db.MINIMUM_DB_VERSION:
+        logger.error(f"Database version ({current_version}) is too old and no longer supported.")
+        logger.error("Please run \"scsd --migrate\" to upgrade your database format before continuing.")
+        sys.exit(1)
 
     logger.info("Getting Game Save List")
     game_list = web_.get_list()

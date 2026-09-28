@@ -10,7 +10,7 @@ class DatabaseMigrator:
         self.db_ = db_
         self.storage_ = storage_
 
-    def run(self):
+    def run(self, manual=False):
         current_version = self.db_.get_db_version()
         target_version = db.db.LATEST_DB_VERSION
 
@@ -25,7 +25,7 @@ class DatabaseMigrator:
             self.db_.set_db_version(1)
             current_version = 1
             logger.info("Migration to v1 complete.")
-        if current_version == 1:
+        if manual and current_version == 1:
             logger.info("Migrating v1 to v2: Changing local file name from numbered suffix to timestamped suffix (i.e. .scsd_1 to .scsd_20260904_231455)...")
             game_list = self.db_.get_stored_game_names([])
             for app_id, game_name in game_list:
