@@ -44,10 +44,10 @@ class db:
     # Migrations are classified as "mandatory" or "optional".
     # - MINIMUM_DB_VERSION enforces the mandatory boundary (run automatically on normal startup).
     # - LATEST_DB_VERSION acts as the optional tip (run manually via --migrate).
-    # 
+    #
     # RULE: Optional migrations are only allowed at the end of the version tree.
-    # There can never be an optional migration preceding a mandatory one. If a future 
-    # mandatory version is added, MINIMUM_DB_VERSION must be bumped past any existing 
+    # There can never be an optional migration preceding a mandatory one. If a future
+    # mandatory version is added, MINIMUM_DB_VERSION must be bumped past any existing
     # optional versions, inherently making them mandatory.
     LATEST_DB_VERSION = 2
     MINIMUM_DB_VERSION = 1
@@ -320,7 +320,7 @@ class db:
 
     def get_file_version_by_file_id(self, file_id:int):
         cur = self.con.cursor()
-        # Uses a window function to dynamically synthesize the old v0 version_num 
+        # Uses a window function to dynamically synthesize the old v0 version_num
         # (where 0 is the active file, 1 is the newest backup, etc.) based on time.
         query = "SELECT time, ROW_NUMBER() OVER (ORDER BY time DESC) - 1 AS version_num FROM VERSION WHERE file_id = ? ORDER BY time DESC;";
         res = cur.execute(query, (file_id,))
