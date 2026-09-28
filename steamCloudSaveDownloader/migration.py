@@ -5,12 +5,12 @@ Migration Philosophy:
 Migrations are classified as either Mandatory or Optional.
 - Mandatory migrations resolve structural or critical data issues (e.g., timezone fixes)
   and are executed automatically during normal application startup.
-- Optional migrations perform non-critical adjustments (e.g., renaming files on disk) 
+- Optional migrations perform non-critical adjustments (e.g., renaming files on disk)
   and must be explicitly triggered by the user via the `--migrate` CLI flag.
-  
+
 Rule: Optional migrations are ONLY allowed at the end of the version tree.
-There can never be an optional migration preceding a mandatory one. If a future 
-migration requires bumping the mandatory boundary (MINIMUM_DB_VERSION), all preceding 
+There can never be an optional migration preceding a mandatory one. If a future
+migration requires bumping the mandatory boundary (MINIMUM_DB_VERSION), all preceding
 optional migrations are implicitly forced to become mandatory.
 """
 

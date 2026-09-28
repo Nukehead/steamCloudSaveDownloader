@@ -95,7 +95,7 @@ def test_v0_rotate_file(storage_env):
     # Rotate file in v0 mode should rename to .scsd_1
     dt = datetime.datetime.now(datetime.timezone.utc)
     s.rotate_file(app_id, filename, "./", file_id, dt)
-    
+
     assert not os.path.exists(os.path.join(game_dir, filename))
     assert os.path.isfile(os.path.join(game_dir, f"{filename}.scsd_1"))
     with open(os.path.join(game_dir, f"{filename}.scsd_1"), "r") as f:
