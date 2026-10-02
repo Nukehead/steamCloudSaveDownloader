@@ -68,13 +68,15 @@ def parse():
             config.config(
                 parsed_args['conf'],
                 auth=parsed_args['auth'],
-                stored=is_stored_specified(parsed_args['stored'])
+                stored=is_stored_specified(parsed_args['stored']),
+                migrate=parsed_args.get('migrate')
             ).get_conf()
     else:
         logger.info(f'Config file not provided')
         parsed_args = \
             config.config(
-                stored=is_stored_specified(parsed_args['stored'])
+                stored=is_stored_specified(parsed_args['stored']),
+                migrate=parsed_args.get('migrate')
             ).load_from_arg(parsed_args)
 
     in_container_check(parsed_args)

@@ -64,6 +64,9 @@ class config:
         if stored is not None:
             self.parsed['stored'] = stored
 
+        if migrate:
+            self.parsed['migrate'] = migrate
+
     def is_file(self, arg) -> pathlib.Path:
         if os.path.isfile(arg):
             return pathlib.Path(arg)
@@ -187,4 +190,6 @@ class config:
         self.parse_danger_zone()
         if 'auth' in parsed_args:
             self.parsed['auth'] = parsed_args['auth']
+        if parsed_args.get('migrate'):
+            self.parsed['migrate'] = parsed_args['migrate']
         return self.parsed
