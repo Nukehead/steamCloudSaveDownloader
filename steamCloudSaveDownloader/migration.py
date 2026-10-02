@@ -33,24 +33,29 @@ class DatabaseMigrator:
         if current_version == target_version:
             return
 
-        logger.info(f"Migrating from database version {current_version} to {target_version}...")
-
         if current_version == 0:
-            logger.info("Migrating v0 to v1: Correcting legacy Pacific Time timestamps to true UTC...")
+            logger.info("Migrating from database version 0 to 1...")
+            logger.info("  Correcting legacy Pacific Time timestamps to true UTC...")
             self._migrate_v0_to_v1()
             self.db_.set_db_version(1)
             current_version = 1
             logger.info("Migration to v1 complete.")
-        if manual and current_version == 1:
-            logger.info("Migrating v1 to v2: Changing local file name from numbered suffix to timestamped suffix (i.e. .scsd_1 to .scsd_20260904_231455)...")
-            game_list = self.db_.get_stored_game_names([])
-            for app_id, game_name in game_list:
-                logger.info(f"  Migrating {game_name} ({app_id})...")
-                self.storage_.rename_legacy_backups(app_id)
 
-            self.db_.set_db_version(2)
-            current_version = 2
-            logger.info("Migration to v2 complete.")
+        if current_version == 1:
+            if manual:
+                logger.info("Migrating from database version 1 to 2...")
+                logger.info("  Changing local file name from numbered suffix to timestamped suffix (i.e. .scsd_1 to .scsd_20260904_231455)...")
+                game_list = self.db_.get_stored_game_names([])
+                for app_id, game_name in game_list:
+                    logger.info(f"    Migrating {game_name} ({app_id})...")
+                    self.storage_.rename_legacy_backups(app_id)
+
+                self.db_.set_db_version(2)
+                current_version = 2
+                logger.info("Migration to v2 complete.")
+            else:
+                # Do not log or attempt v1->v2 without the manual flag
+                pass
 
 
     def _migrate_v0_to_v1(self):
