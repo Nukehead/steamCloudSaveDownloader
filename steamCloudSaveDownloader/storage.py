@@ -164,20 +164,23 @@ class storage:
                 if v_num == 0:
                     # Skip the active file (version 0), as it has no suffix to rename
                     continue
-                legacy_file = os.path.join(path_to_save, f"{filename}.scsd_{v_num}")
-                if os.path.isfile(legacy_file):
-                    new_suffix = self.get_version_suffix(v_time)
-                    new_file = os.path.join(path_to_save, filename + new_suffix)
-                    if not os.path.exists(new_file):
-                        old_info = os.stat(legacy_file)
-                        os.replace(legacy_file, new_file)
-                        os.utime(new_file, (old_info.st_mtime, old_info.st_mtime))
-                        logger.info(f"Migrated legacy backup '{legacy_file}' -> '{new_file}'")
-                    else:
-                        try:
-                            os.remove(legacy_file)
-                        except OSError:
-                            pass
+                try:
+                    legacy_file = os.path.join(path_to_save, f"{filename}.scsd_{v_num}")
+                    if os.path.isfile(legacy_file):
+                        new_suffix = self.get_version_suffix(v_time)
+                        new_file = os.path.join(path_to_save, filename + new_suffix)
+                        if not os.path.exists(new_file):
+                            old_info = os.stat(legacy_file)
+                            os.replace(legacy_file, new_file)
+                            os.utime(new_file, (old_info.st_mtime, old_info.st_mtime))
+                            logger.info(f"Migrated legacy backup '{legacy_file}' -> '{new_file}'")
+                        else:
+                            try:
+                                os.remove(legacy_file)
+                            except OSError:
+                                pass
+                except OSError as e:
+                    logger.warning(f"Failed to migrate legacy backup for {filename}: {e}")
 
         # Also scan the entire game folder for any remaining legacy .scsd_<digits> files
         try:

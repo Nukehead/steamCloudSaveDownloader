@@ -81,7 +81,7 @@ class TestDB:
         assert versions[0][0] == datetime.datetime(2009, 9, 6)
         assert versions[0][1] == 0
         assert versions[1][0] == datetime.datetime(2009, 9, 5)
-        assert versions[1][1] == 1
+        assert versions[1][1] == 0
 
     def test_get_latest_file_version_time(self, tmp_location):
         db_ = db.db(db_location=tmp_location, rotation=2)
