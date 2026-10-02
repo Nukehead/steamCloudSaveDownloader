@@ -64,15 +64,7 @@ class db:
             self.initialize_schema()
 
 
-    def get_db_version(self) -> int:
-        cur = self.con.cursor()
-        res = cur.execute("PRAGMA user_version;")
-        return res.fetchone()[0]
 
-    def set_db_version(self, version: int):
-        cur = self.con.cursor()
-        cur.execute(f"PRAGMA user_version = {version};")
-        self.con.commit()
 
     def __del__(self):
         if hasattr(self, 'con'):
@@ -140,7 +132,7 @@ class db:
 
         self.con.commit()
 
-        self.set_db_version(1)
+        self.set_db_version(db.LATEST_DB_VERSION)
 
         if not self.schema_ok():
             raise err.err(err_enum.CANNOT_INITIALIZE_DB)
@@ -320,9 +312,7 @@ class db:
 
     def get_file_version_by_file_id(self, file_id:int):
         cur = self.con.cursor()
-        # Uses a window function to dynamically synthesize the old v0 version_num
-        # (where 0 is the active file, 1 is the newest backup, etc.) based on time.
-        query = "SELECT time, ROW_NUMBER() OVER (ORDER BY time DESC) - 1 AS version_num FROM VERSION WHERE file_id = ? ORDER BY time DESC;";
+        query = "SELECT time, version_num FROM VERSION WHERE file_id = ? ORDER BY time DESC;"
         res = cur.execute(query, (file_id,))
         result = res.fetchall()
         return result

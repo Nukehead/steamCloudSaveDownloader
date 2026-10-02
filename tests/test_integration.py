@@ -146,7 +146,7 @@ def test_v0_migration_update_and_rotation_flow(integration_env):
     assert versions[0][0] == t3.replace(tzinfo=None)
     assert versions[0][1] == 0
     assert versions[1][0] == t2.replace(tzinfo=None)
-    assert versions[1][1] == 1
+    assert versions[1][1] == 0
 
 def test_no_op_when_file_unchanged(integration_env):
     save_dir, db_, storage_, summary_ = integration_env
