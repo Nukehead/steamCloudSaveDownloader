@@ -42,6 +42,13 @@ Please refer to [Scheduled Run](#Scheduled-Run) if you want to run scsd automati
 
 For more detail usages please reference [Command Arguments](https://github.com/pyscsd/steamCloudSaveDownloader/wiki/Command-Arguments) and [Config File](https://github.com/pyscsd/steamCloudSaveDownloader/wiki/Config-File)
 
+## Upgrading from older versions
+If you are upgrading from a version before 0.2.0, your older backups (named `.scsd_1`, `.scsd_2`, etc.) will continue to exist, but new backups will use the `.scsd_<timestamp>` format. If you want to rename all your old backups to the new timestamp format, run:
+```sh
+scsd --migrate
+```
+This is an optional, one-time operation.
+
 ## Authentication
 By running `scsd -a <username>` scsd save a session file with NO password within. This session last approximately about a month if your IP has not been changed. Once expired scsd will notify you if the notification options are given.
 

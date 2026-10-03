@@ -8,12 +8,11 @@ def test_stored_handles_none_dates_without_crashing(capsys, tmp_path):
     # Prepare dummy DB with None dates
     db_loc = str(tmp_path)
     db_ = db(db_loc)
-    cur = db_.con.cursor()
-    cur.execute("INSERT INTO GAMES VALUES (1, 'Test Game', 'testdir');")
-    cur.execute("INSERT INTO FILES VALUES (1, 'test.sav', '', 1);")
+    from .helpers import seed_game, seed_file, seed_version
+    seed_game(db_, 1, 'Test Game', 'testdir')
+    file_id = seed_file(db_, 'test.sav', '', 1)
     # Insert None for time
-    cur.execute("INSERT INTO VERSION (version_id, file_id, time, version_num) VALUES (1, 1, NULL, 1);")
-    db_.con.commit()
+    seed_version(db_, file_id, None, 1)
 
     s = stored(staged_args=[], save_dir=db_loc)
     s.db = db_
@@ -29,17 +28,16 @@ def test_stored_handles_none_dates_without_crashing(capsys, tmp_path):
 def test_stored_handles_multiple_versions(capsys, tmp_path):
     db_loc = str(tmp_path)
     db_ = db(db_loc)
-    cur = db_.con.cursor()
-    cur.execute("INSERT INTO GAMES VALUES (1, 'Test Game', 'testdir');")
-    cur.execute("INSERT INTO FILES VALUES (1, 'test.sav', '', 1);")
+    from .helpers import seed_game, seed_file, seed_version
+    seed_game(db_, 1, 'Test Game', 'testdir')
+    file_id = seed_file(db_, 'test.sav', '', 1)
 
     t1 = datetime.datetime(2026, 10, 2, 10, 0, 0)
     t2 = datetime.datetime(2026, 10, 1, 10, 0, 0)
 
     # In V2, all version_num are 0
-    cur.execute("INSERT INTO VERSION (version_id, file_id, time, version_num) VALUES (1, 1, ?, 0);", (t1,))
-    cur.execute("INSERT INTO VERSION (version_id, file_id, time, version_num) VALUES (2, 1, ?, 0);", (t2,))
-    db_.con.commit()
+    seed_version(db_, file_id, t1, 0)
+    seed_version(db_, file_id, t2, 0)
 
     s = stored(staged_args=[], save_dir=db_loc)
     s.db = db_

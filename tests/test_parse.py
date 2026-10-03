@@ -1,7 +1,7 @@
 import steamCloudSaveDownloader.parser as parser
 
 import datetime
-from zoneinfo import ZoneInfo
+
 import os
 import pytest
 
@@ -108,10 +108,7 @@ class TestParse:
         from steamCloudSaveDownloader.err import err
 
         # Should parse normally without a timezone
-        try:
-            parse_time("12 Oct, 2022 @ 3:08pm")
-        except Exception as e:
-            pytest.fail(f"Valid time failed to parse: {e}")
+        parse_time("12 Oct, 2022 @ 3:08pm")
 
         # Should fail if Valve adds a timezone abbreviation
         with pytest.raises(err) as exc_info:

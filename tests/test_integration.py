@@ -95,13 +95,11 @@ def test_v0_migration_update_and_rotation_flow(integration_env):
     # 1. Prep DB with an existing game and 2 versions
     db_.add_new_game(app_id, 'V0RPG')
     db_.set_game_dir(app_id, str(app_id))
-    cur = db_.con.cursor()
-    cur.execute("INSERT INTO FILES VALUES (NULL, ?, ?, ?);", ('save.sav', './', app_id))
-    file_id = cur.lastrowid
+    from .helpers import seed_file, seed_version
+    file_id = seed_file(db_, 'save.sav', './', app_id)
     # v2 is active (0), v1 is older (1) in v0 scheme
-    cur.execute("INSERT INTO VERSION VALUES (NULL, ?, ?, ?);", (file_id, t2.replace(tzinfo=None), 0))
-    cur.execute("INSERT INTO VERSION VALUES (NULL, ?, ?, ?);", (file_id, t1.replace(tzinfo=None), 1))
-    db_.con.commit()
+    seed_version(db_, file_id, t2.replace(tzinfo=None), 0)
+    seed_version(db_, file_id, t1.replace(tzinfo=None), 1)
 
     # 2. Prep disk state: active save.sav and v0 backup save.sav.scsd_1
     game_dir = os.path.join(save_dir, str(app_id))

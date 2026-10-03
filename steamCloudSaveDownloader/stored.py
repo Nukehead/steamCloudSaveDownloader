@@ -20,7 +20,7 @@ class stored:
                 print(f"  - {location}/{filename}")
                 version_info = \
                     self.db.get_file_version_by_file_id(file_id)
-                for i, (utc_date, version_num) in enumerate(version_info):
+                for i, (utc_date, _) in enumerate(version_info):
                     if utc_date and utc_date.tzinfo:
                         local_date = utc_date.astimezone().replace(tzinfo=None)
                     else:
@@ -28,7 +28,7 @@ class stored:
                     if i == 0:
                         suffix_text = "(active)"
                     else:
-                        suffix_str = utc_date.strftime("%Y%m%d_%H%M%S") if utc_date else str(version_num)
+                        suffix_str = utc_date.strftime("%Y%m%d_%H%M%S") if utc_date else "unknown"
                         suffix_text = f"(backup: .scsd_{suffix_str})"
 
                     print(f"    - {local_date} {suffix_text}")
