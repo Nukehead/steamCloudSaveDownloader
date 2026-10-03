@@ -121,6 +121,31 @@ class storage:
 
 
     @key_interrupt_atomic
+    def increment_file_version(self,
+                               app_id:int,
+                               filename:str,
+                               file_path:str,
+                               current_max_version:int):
+        db_game_dir = self.db_.get_game_dir(app_id)
+        path_to_save = os.path.join(self.location, db_game_dir, file_path)
+
+        for old, new in zip(
+                range(current_max_version - 2, -1, -1),
+                range(current_max_version - 1, 0, -1)):
+            old_version_suffix = self.get_version_suffix(old)
+            new_version_suffix = self.get_version_suffix(new)
+
+            old_name = os.path.join(path_to_save, filename + old_version_suffix)
+            new_name = os.path.join(path_to_save, filename + new_version_suffix)
+
+            if os.path.exists(old_name):
+                old_file_info = os.stat(old_name)
+                old_mtime = old_file_info.st_mtime
+                os.replace(old_name, new_name)
+                os.utime(new_name, (old_mtime, old_mtime))
+
+
+    @key_interrupt_atomic
     def rename_legacy_backups(self, app_id: int):
         db_game_dir = self.db_.get_game_dir(app_id)
         if db_game_dir is None:
@@ -185,6 +210,11 @@ class storage:
         except OSError:
             pass
 
+
+    @property
+    def is_timestamp_mode(self):
+        return self.db_.get_db_version() >= 2
+
     @key_interrupt_atomic
     def rotate_file(self,
                     app_id:int,
@@ -201,16 +231,21 @@ class storage:
 
         current_file = os.path.join(path_to_save, filename)
 
-        if current_file_time is not None and os.path.isfile(current_file):
-            archive_suffix = self.get_version_suffix(current_file_time)
-            archive_file = os.path.join(path_to_save, filename + archive_suffix)
+        if self.is_timestamp_mode:
+            if current_file_time is not None and os.path.isfile(current_file):
+                archive_suffix = self.get_version_suffix(current_file_time)
+                archive_file = os.path.join(path_to_save, filename + archive_suffix)
 
-            old_file_info = os.stat(current_file)
-            old_mtime = old_file_info.st_mtime
-            os.replace(current_file, archive_file)
-            os.utime(archive_file, (old_mtime, old_mtime))
+                old_file_info = os.stat(current_file)
+                old_mtime = old_file_info.st_mtime
+                os.replace(current_file, archive_file)
+                os.utime(archive_file, (old_mtime, old_mtime))
+        else:
+            if os.path.isfile(current_file):
+                self.increment_file_version(app_id, filename, file_path, self.db_.rotation)
 
         self.db_.update_file_update_time_to_now(file_id, newest_file_time)
+
 
     @key_interrupt_atomic
     def remove_outdated(self,
@@ -221,24 +256,37 @@ class storage:
         db_game_dir = self.db_.get_game_dir(app_id)
         path_to_save = os.path.join(self.location, db_game_dir, file_path)
 
-        outdated_versions = self.db_.remove_outdated_file(file_id)
-        if not outdated_versions:
-            return
+        if self.is_timestamp_mode:
+            outdated_versions = self.db_.remove_outdated_file(file_id)
+            if not outdated_versions:
+                return
 
-        for version_time, v0_version_num in outdated_versions:
-
-            version_suffix = self.get_version_suffix(version_time)
-            target = os.path.join(path_to_save, filename + version_suffix)
-            logger.info(f"Remove rotated file {filename + version_suffix}")
-            try:
-                if os.path.exists(target):
-                    os.remove(target)
-                elif v0_version_num is not None:
-                    v0_suffix = self.get_version_suffix(v0_version_num)
-                    v0_target = os.path.join(path_to_save, filename + v0_suffix)
-                    if os.path.exists(v0_target):
-                        os.remove(v0_target)
-            except OSError:
-                e = err.err(err_enum.CANNOT_REMOVE_OUTDATED)
-                e.set_additional_info(filename + version_suffix)
-                e.log()
+            for version_time, v0_version_num in outdated_versions:
+                version_suffix = self.get_version_suffix(version_time)
+                target = os.path.join(path_to_save, filename + version_suffix)
+                logger.info(f"Remove rotated file {filename + version_suffix}")
+                try:
+                    if os.path.exists(target):
+                        os.remove(target)
+                    elif v0_version_num is not None:
+                        v0_suffix = self.get_version_suffix(v0_version_num)
+                        v0_target = os.path.join(path_to_save, filename + v0_suffix)
+                        if os.path.exists(v0_target):
+                            os.remove(v0_target)
+                except OSError:
+                    e = err.err(err_enum.CANNOT_REMOVE_OUTDATED)
+                    e.set_additional_info(filename + version_suffix)
+                    e.log()
+        else:
+            rotation = self.db_.rotation
+            if rotation <= 0:
+                return
+            import glob
+            pattern = os.path.join(path_to_save, f"{filename}.scsd_*")
+            for f in glob.glob(pattern):
+                try:
+                    suffix_str = f.split('.scsd_')[-1]
+                    if suffix_str.isdigit() and int(suffix_str) >= rotation:
+                        os.remove(f)
+                except OSError:
+                    pass

@@ -246,6 +246,10 @@ class db:
     def update_file_update_time_to_now(self, file_id:int, newest_file_time: datetime.datetime) -> int:
         cur = self.con.cursor()
 
+        if self.get_db_version() < 2:
+            # Increment one for all existing versions in legacy mode
+            cur.execute("UPDATE VERSION SET version_num = version_num + 1 WHERE file_id = ?;", (file_id,))
+
         time_without_tz = newest_file_time.replace(tzinfo=None)
         res = cur.execute("INSERT INTO VERSION (version_id, file_id, time, version_num) VALUES (NULL, ?, ?, 0)", (file_id, time_without_tz))
         self.con.commit()

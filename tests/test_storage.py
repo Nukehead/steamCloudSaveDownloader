@@ -157,3 +157,93 @@ def test_migrate_orphaned_v0_backups(storage_env):
     assert os.path.isfile(expected_migrated)
     with open(expected_migrated, "r") as f:
         assert f.read() == "orphaned_backup"
+
+def test_v1_file_cleanup(storage_env):
+    save_dir, db_, s = storage_env
+    db_.set_db_version(1) # Force v1 mode
+    app_id = 8888
+    filename = "v1.sav"
+    from .helpers import seed_game, seed_file, seed_version
+    seed_game(db_, app_id, "V1Game", "testdir")
+    s.create_game_folder("V1Game", app_id)
+
+    t1 = datetime.datetime(2025, 1, 1, 10, 0, 0)
+    t2 = datetime.datetime(2025, 1, 2, 10, 0, 0)
+    t3 = datetime.datetime(2025, 1, 3, 10, 0, 0)
+
+    # Insert versions into db with v1 version_num
+    file_id = seed_file(db_, filename, "./", app_id)
+    seed_version(db_, file_id, t3, 0)
+    seed_version(db_, file_id, t2, 1)
+    seed_version(db_, file_id, t1, 2)
+
+    game_dir = os.path.join(save_dir, "testdir")
+    # Write active file and v1 .scsd_2 file
+    with open(os.path.join(game_dir, filename), "w") as f:
+        f.write("active")
+    with open(os.path.join(game_dir, f"{filename}.scsd_1"), "w") as f:
+        f.write("v2")
+    with open(os.path.join(game_dir, f"{filename}.scsd_2"), "w") as f:
+        f.write("v1")
+    with open(os.path.join(game_dir, f"{filename}.scsd_3"), "w") as f:
+        f.write("orphan_glob_target")
+
+    # Rotation is 2, so version t1 (which had version_num 2) should be pruned
+    # Additionally, the v1 glob branch should find and prune .scsd_3 despite it not being in the DB
+    s.remove_outdated(app_id, filename, "./", file_id)
+
+    assert not os.path.exists(os.path.join(game_dir, f"{filename}.scsd_3"))
+    assert not os.path.exists(os.path.join(game_dir, f"{filename}.scsd_2"))
+    assert os.path.isfile(os.path.join(game_dir, f"{filename}.scsd_1"))
+    assert os.path.isfile(os.path.join(game_dir, filename))
+
+
+def test_v1_rotate_file(storage_env):
+    save_dir, db_, s = storage_env
+    db_.set_db_version(1) # Force v1 mode
+    app_id = 8889
+    filename = "leg_rotate.sav"
+    from .helpers import seed_game, seed_file
+    seed_game(db_, app_id, "LegRotateGame", "testdir")
+    s.create_game_folder("LegRotateGame", app_id)
+
+    file_id = seed_file(db_, filename, "./", app_id)
+
+    game_dir = os.path.join(save_dir, "testdir")
+    with open(os.path.join(game_dir, filename), "w") as f:
+        f.write("active")
+
+    # Rotate file in v1 mode should rename to .scsd_1
+    dt = datetime.datetime.now(datetime.timezone.utc)
+    s.rotate_file(app_id, filename, "./", file_id, dt)
+
+    assert not os.path.exists(os.path.join(game_dir, filename))
+    assert os.path.isfile(os.path.join(game_dir, f"{filename}.scsd_1"))
+    with open(os.path.join(game_dir, f"{filename}.scsd_1"), "r") as f:
+        assert f.read() == "active"
+
+
+def test_increment_file_version_v1(storage_env):
+    save_dir, db_, s = storage_env
+    db_.set_db_version(1)
+    app_id = 5555
+    filename = "shift.sav"
+    from .helpers import seed_game
+    seed_game(db_, app_id, "ShiftGame", "testdir")
+    s.create_game_folder("ShiftGame", app_id)
+
+    game_dir = os.path.join(save_dir, "testdir")
+    with open(os.path.join(game_dir, filename), "w") as f:
+        f.write("0")
+    with open(os.path.join(game_dir, f"{filename}.scsd_1"), "w") as f:
+        f.write("1")
+
+    # Call increment_file_version with max_version=3
+    # 0 -> 1, 1 -> 2
+    s.increment_file_version(app_id, filename, "./", 3)
+
+    assert not os.path.exists(os.path.join(game_dir, filename))
+    with open(os.path.join(game_dir, f"{filename}.scsd_1"), "r") as f:
+        assert f.read() == "0"
+    with open(os.path.join(game_dir, f"{filename}.scsd_2"), "r") as f:
+        assert f.read() == "1"
