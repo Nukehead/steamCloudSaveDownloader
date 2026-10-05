@@ -36,7 +36,7 @@ def test_get_filename_location(storage_env):
 
 
 
-def test_rotate_file_and_remove_outdated(storage_env):
+def test_v2_timestamp_rotate(storage_env):
     save_dir, db_, s = storage_env
     app_id = 9999
     filename = "game.sav"
@@ -76,16 +76,43 @@ def test_rotate_file_and_remove_outdated(storage_env):
     # Crucial test: backup_1 must still exist and was NOT renamed
     assert os.path.isfile(backup_1)
 
-    # Simulate downloading v3
-    with open(active_path, "w") as f:
-        f.write("version 3")
+def test_hybrid_pruning(storage_env):
+    save_dir, db_, s = storage_env
+    app_id = 1111
+    filename = "hybrid.sav"
+    db_.add_new_game(app_id, "HybridGame")
+    s.create_game_folder("HybridGame", app_id)
 
-    # Now remove outdated (rotation is 2, so newest 2: t3 and t2 are kept, t1 should be deleted)
+    t1 = datetime.datetime(2026, 10, 3, 12, 0, 0)
+    t2 = datetime.datetime(2026, 10, 3, 13, 0, 0)
+    t3 = datetime.datetime(2026, 10, 3, 14, 0, 0)
+
+    from .helpers import seed_file, seed_version
+    file_id = seed_file(db_, filename, "./", app_id)
+
+    # We will pretend t3 is the active file (version_num=0)
+    seed_version(db_, file_id, t3, 0)
+    # t2 is a timestamp backup (v2 style), version_num=0
+    seed_version(db_, file_id, t2, 0)
+    # t1 is a legacy backup (v1 style), version_num=1
+    seed_version(db_, file_id, t1, 1)
+
+    game_dir = os.path.join(save_dir, str(app_id))
+    active_path = os.path.join(game_dir, filename)
+    backup_v2 = os.path.join(game_dir, f"{filename}.scsd_20261003_130000")
+    backup_v1 = os.path.join(game_dir, f"{filename}.scsd_1")
+
+    with open(active_path, "w") as f: f.write("active")
+    with open(backup_v2, "w") as f: f.write("v2_backup")
+    with open(backup_v1, "w") as f: f.write("v1_backup")
+
+    # DB rotation is 2. So keeping the active file (t3) and the first backup (t2).
+    # The legacy backup (t1) should be pruned.
     s.remove_outdated(app_id, filename, "./", file_id)
 
-    assert not os.path.exists(backup_1)
-    assert os.path.isfile(backup_2)
-    assert os.path.isfile(active_path)
+    assert not os.path.exists(backup_v1), "Legacy .scsd_1 file was not pruned"
+    assert os.path.exists(backup_v2), "V2 backup should be kept"
+    assert os.path.exists(active_path), "Active file should be kept"
 
 def test_rename_legacy_backups(storage_env):
     save_dir, db_, s = storage_env
@@ -196,6 +223,10 @@ def test_v1_file_cleanup(storage_env):
     assert not os.path.exists(os.path.join(game_dir, f"{filename}.scsd_2"))
     assert os.path.isfile(os.path.join(game_dir, f"{filename}.scsd_1"))
     assert os.path.isfile(os.path.join(game_dir, filename))
+
+    # Verify that the database was pruned as well
+    remaining = db_.get_file_version_by_file_id(file_id)
+    assert len(remaining) == 2, f"Expected 2 versions remaining in DB, found {len(remaining)}"
 
 
 def test_v1_rotate_file(storage_env):

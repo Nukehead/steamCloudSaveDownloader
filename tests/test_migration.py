@@ -46,7 +46,7 @@ def test_v0_to_v1_migration_strips_timezone(tmp_path):
     assert raw_time_str.startswith("2026-08-25T20:41:00"), f"Timestamp was not correctly converted to UTC: {raw_time_str}"
 
 
-def test_v1_to_v2_migration_renames_files(tmp_path):
+def test_migration_script(tmp_path):
     db_loc = str(tmp_path)
     db_ = db(db_loc)
 
@@ -81,6 +81,23 @@ def test_v1_to_v2_migration_renames_files(tmp_path):
 
     expected_new_file = game_dir / "test.sav.scsd_20261002_100000"
     assert expected_new_file.exists(), "Timestamped backup file was not created"
+
+
+def test_v1_no_migration_by_default(tmp_path):
+    db_loc = str(tmp_path)
+    db_ = db(db_loc)
+
+    # Force DB to version 1
+    db_.set_db_version(1)
+
+    from steamCloudSaveDownloader.storage import storage
+    migrator = DatabaseMigrator(db_, storage(str(tmp_path), db_))
+
+    # Running without manual=True (i.e. without --migrate)
+    migrator.run(manual=False)
+
+    # Assert database stays at V1
+    assert db_.get_db_version() == 1
 
 
 def test_v0_to_v1_migration_with_aware_time(tmp_path):

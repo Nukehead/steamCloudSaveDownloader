@@ -1,3 +1,4 @@
+import datetime
 from . import db
 
 import logging
@@ -20,13 +21,16 @@ class stored:
                 print(f"  - {location}/{filename}")
                 version_info = \
                     self.db.get_file_version_by_file_id(file_id)
-                for i, (utc_date, _) in enumerate(version_info):
-                    if utc_date and utc_date.tzinfo:
-                        local_date = utc_date.astimezone().replace(tzinfo=None)
+                for i, (utc_date, v_num) in enumerate(version_info):
+                    if utc_date is not None:
+                        aware_utc = utc_date.replace(tzinfo=datetime.timezone.utc)
+                        local_date = aware_utc.astimezone().replace(tzinfo=None)
                     else:
-                        local_date = utc_date
+                        local_date = None
                     if i == 0:
                         suffix_text = "(active)"
+                    elif v_num is not None and v_num > 0:
+                        suffix_text = f"(backup: .scsd_{v_num})"
                     else:
                         suffix_str = utc_date.strftime("%Y%m%d_%H%M%S") if utc_date else "unknown"
                         suffix_text = f"(backup: .scsd_{suffix_str})"

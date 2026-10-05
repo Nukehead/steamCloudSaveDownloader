@@ -281,6 +281,9 @@ class storage:
             rotation = self.db_.rotation
             if rotation <= 0:
                 return
+
+            self.db_.remove_outdated_file(file_id)
+
             import glob
             pattern = os.path.join(path_to_save, f"{filename}.scsd_*")
             for f in glob.glob(pattern):

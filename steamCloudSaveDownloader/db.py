@@ -316,7 +316,7 @@ class db:
 
     def get_file_version_by_file_id(self, file_id:int):
         cur = self.con.cursor()
-        query = "SELECT time, version_num FROM VERSION WHERE file_id = ? ORDER BY time DESC;"
+        query = "SELECT time, version_num FROM VERSION WHERE file_id = ? ORDER BY time DESC, version_num ASC;"
         res = cur.execute(query, (file_id,))
         result = res.fetchall()
         return result
