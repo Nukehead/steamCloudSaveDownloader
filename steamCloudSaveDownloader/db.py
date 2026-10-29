@@ -134,6 +134,8 @@ class db:
         if not self.schema_ok():
             raise err.err(err_enum.CANNOT_INITIALIZE_DB)
 
+        self.set_db_version(self.LATEST_DB_VERSION)
+
     def add_requests_count(self, count:int):
         cur = self.con.cursor()
         res = cur.execute("SELECT time FROM REQUESTS WHERE id = 0;");
